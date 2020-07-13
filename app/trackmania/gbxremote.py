@@ -22,7 +22,6 @@ class DedicatedRemote:
         self.validHeaders = ['GBXRemote 2']
         
         self.socket = None
-        self.socketlock = threading.RLock()
 
         self.connalive = False
         self.connalivelock = threading.RLock()
@@ -46,9 +45,6 @@ class DedicatedRemote:
         self._recv_loop_t = None
     
     def __recv_header(self):
-        self.socket.setblocking(True)
-        self.socket.settimeout(3)
-
         # get header length
         hlendata = self.socket.recv(4)
         hlen = struct.unpack('<I', hlendata)[0]
@@ -117,9 +113,6 @@ class DedicatedRemote:
             if header not in self.validHeaders:
                 logger.error('Remote returned an invalid header: %s' % str(header))
                 return False
-            
-            self.socket.setblocking(False)
-            self.socket.settimeout(0)
 
             return True
         except socket.gaierror:
@@ -187,18 +180,16 @@ class DedicatedRemote:
     def _result_loop(self):
         connectionreset = False
 
+        self.socket.setblocking(True)
+
         while True:
             with self.connalivelock:
                 if not self.connalive:
                     break
             
             try:
-                self.socketlock.acquire()
-
                 # recieve packets
                 headerdata = self.socket.recv(8)
-
-                self.socket.setblocking(True)
 
                 size, handler = struct.unpack('<IL', headerdata)
                 packetdata = self.socket.recv(size)
@@ -228,9 +219,6 @@ class DedicatedRemote:
             except Exception as e:
                 pass
                 #logger.error('Failed to recieve.', exc_info=e)
-            finally:
-                self.socket.setblocking(False)
-                self.socketlock.release()
         
         if connectionreset:
             # attempt re-connection
@@ -340,8 +328,8 @@ class DedicatedRemote:
             logger.debug("Calling method '%s', args: %s" % (str(method), str(args)))
             
             packet = self.__build_packet(handler, method, args)
-            with self.socketlock:
-                self.socket.send(packet)
+            #with self.socketlock:
+            self.socket.send(packet)
             
             # wait for result
             if not asynchronous:
