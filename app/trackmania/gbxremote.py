@@ -181,6 +181,7 @@ class DedicatedRemote:
         connectionreset = False
 
         self.socket.setblocking(True)
+        self.socket.settimeout(0.1)
 
         while True:
             with self.connalivelock:
@@ -291,7 +292,10 @@ class DedicatedRemote:
             logger.debug('Waiting for recv loop to end ...')
             with self.connalivelock:
                 self.connalive = False
+            self.socket.settimeout(0.1)
+            logger.debug('recv loop wait 2')
             self._recv_loop_t.join()
+            logger.debug('recv loop wait 3')
     
     def call(self, method, *args, retryConnection=True, asynchronous=False):
         """Call a XML-RPC method on the remote server.

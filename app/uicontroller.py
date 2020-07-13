@@ -7,6 +7,7 @@ from .cli import CommandInputBox, LineBuilder, InfoView, ConsoleBox, ColorPairMa
 from .trackmania.gbxremote import DedicatedRemote
 from .trackmania.state import GameStateTracker
 from .syntax import Parser
+from .internalcmds import Commands
 
 logger = logging.getLogger('clifga')
 
@@ -30,6 +31,14 @@ class Clifga:
 
         self._conn_retry = 0
         self._conn_maxretries = 0
+
+        self.commands = Commands(self)
+        self._mainLoopEnabled = True
+
+        # main widgets
+        self.cmdInput = None
+        self.infoView = None
+        self.consoleBox = None
     
     def _conn_attempt_cb(self, retry, maxretries):
         self._conn_retry = retry
@@ -74,11 +83,11 @@ class Clifga:
         logger.debug('%s, %s' % (width, height))
         
         # widgets
-        cmdInput = CommandInputBox(self.screen, 2, height-1, width-4, self.remote)
-        infoView = InfoView(self.screen, 0, height - 2, self.gameState, self.connInfo)
+        self.cmdInput = CommandInputBox(self.screen, 2, height-1, width-4, self.remote)
+        self.infoView = InfoView(self.screen, 0, height - 2, self.gameState, self.connInfo)
 
-        consoleBox = ConsoleBox(self.screen, 0, 0, width, height-3, self.gameState)
-        consoleBox.log(LineBuilder().addText('GBXRemote Ready to recieve commands. Type \'help\' for usage.', ColorPairMaker.MakeColorPair(curses.COLOR_MAGENTA)))
+        self.consoleBox = ConsoleBox(self.screen, 0, 0, width, height-3, self.gameState)
+        self.consoleBox.log(LineBuilder().addText('GBXRemote Ready to recieve commands. Type \'help\' for usage.', ColorPairMaker.MakeColorPair(curses.COLOR_MAGENTA)))
 
         chatname = self.connInfo['username']
 
@@ -86,7 +95,7 @@ class Clifga:
         self.screen.clear()
         self.gameState.initialize()
 
-        while True:
+        while self._mainLoopEnabled:
             c = self.screen.getch()
 
             while c != curses.ERR:
@@ -114,28 +123,28 @@ class Clifga:
                     logger.debug('%s, %s' % (width, height))
 
                     # input box
-                    cmdInput.y = height - 1
-                    cmdInput.width = width - 4
+                    self.cmdInput.y = height - 1
+                    self.cmdInput.width = width - 4
 
                     # info view
-                    infoView.y = height - 2
+                    self.infoView.y = height - 2
 
                     # console
-                    consoleBox.width = width
-                    consoleBox.height = height - 3
+                    self.consoleBox.width = width
+                    self.consoleBox.height = height - 3
 
                     self.screen.erase()
                 
                 ####################
                 
                 # handle inputs
-                cmdInput.handle_input(c)
-                consoleBox.handle_input(c)
+                self.cmdInput.handle_input(c)
+                self.consoleBox.handle_input(c)
 
                 ####################
 
                 # check if we have a new command
-                rawcmd = cmdInput.action(False)
+                rawcmd = self.cmdInput.action(False)
 
                 if rawcmd is not None:
                     try:
@@ -145,69 +154,14 @@ class Clifga:
                         cmd, args = parser.parse()
 
                         # only clear if correctly parsed
-                        cmdInput.clear()
+                        self.cmdInput.clear()
 
-                        # basic internal cmd setup
-                        if cmd.lower() == 'exit': # Exit the app
-                            self.remote.stop()
-                            break
-                        elif cmd.lower() == 'help': # Show help msg
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, 'For GBXRemote methods, see XMLRPC docs.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, 'Internal app commands:')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  help - Show this help message.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  exit - Close the session and the application.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  togglecallbacks - Toggle automatic display callbacks from the server.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  togglechat - Toggle dispalying of parsed chat messages.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  setname <name> - Set your chat name.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  chat <message> - Toggle dispalying of parsed chat messages.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, 'Keybinds:')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  F1 - Scroll up in the console.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  F2 - Scroll down in the console.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  ENTER - Send method call.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  TAB - Complete method suggestion.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  ARROW UP - Go back in call history.')
-                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  ARROW Down - Go forward in call history.')
-                            consoleBox.scrollbottom()
-                        elif cmd.lower() == 'togglecallbacks': # toggle callbacks display
-                            state = consoleBox.getEnableShowcallbacks()
-                            consoleBox.enableShowcallbacks(False if state else True)
-                            if not state:
-                                consoleBox.log('Will now show callbacks.')
-                            else:
-                                consoleBox.log('Disabled displaying of callbacks.')
-                            consoleBox.scrollbottom()
-                        elif cmd.lower() == 'togglechat': # toggle chat display
-                            state = consoleBox.getEnableShowChat()
-                            nextState = False if state else True
-                            consoleBox.enableShowChat(nextState)
-                            if nextState:
-                                consoleBox.log('Will now show the in-game chat.')
-                            else:
-                                consoleBox.log('Disabled in-game chat display.')
-                        elif cmd.lower() == 'setname': # set chat name
-                            if len(args) == 1 and type(args[0]) is str:
-                                chatname = args[0]
-                                consoleBox.log('Your chat name is now: ' + chatname)
-                            else:
-                                consoleBox.error("Invalid argument for command 'setname'")
-                        elif cmd.lower() == 'chat': # send chat message
-                            if len(args) > 0:
-                                message = ''
-                                for arg in args:
-                                    message += str(arg) + ' '
-                                message = message[:-1]
-                                message = '[$c00Admin$g:$<$f36%s$>$fff]$g $< $fc3%s $>' % (chatname, message)
-                                t = threading.Thread(target=self.cmdsend_handler, args=('ChatSendServerMessage', [message], cmdInput, consoleBox))
-                                t.start()
-                                cmdInput.setLoading()
-                                consoleBox._logChat('<server-local>', chatname, message)
-                            else:
-                                consoleBox.error('Please provide an actual message!')
-                        else:
+                        if not self.commands.callIfExists(cmd, *args):
                             # send xmlrpc method call
-                            t = threading.Thread(target=self.cmdsend_handler, args=(cmd, args, cmdInput, consoleBox))
+                            t = threading.Thread(target=self.cmdsend_handler, args=(cmd, args, self.cmdInput, self.consoleBox))
                             t.start()
-                            cmdInput.setLoading()
+                            self.cmdInput.setLoading()
+                        
                     except:
                         pass
                 
@@ -216,16 +170,16 @@ class Clifga:
             ####################
             
             # draw widgets and other things
-            consoleBox.draw()
-            cmdInput.draw()
+            self.consoleBox.draw()
+            self.cmdInput.draw()
             self.screen.addstr(height - 3, 0, '─'*width)
-            infoView.draw()
+            self.infoView.draw()
             self.screen.addstr(height - 1, 0, '> ')
 
             ####################
 
             # refresh the screen
-            cmdInput.setCursor()
+            self.cmdInput.setCursor()
             self.screen.refresh()
 
             time.sleep(0.1)
