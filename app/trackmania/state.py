@@ -9,8 +9,11 @@ logger = logging.getLogger('clifga')
 
 class GameStateTracker:
     def __init__(self, remote, maxChatLines=50):
-        self.players = dict()
+        self.players = []
         self.playersLock = threading.RLock()
+
+        self.playersCache = dict()
+        self.playersCacheLock = threading.RLock()
 
         self.chat = []
         self.chatLock = threading.RLock()
@@ -42,32 +45,35 @@ class GameStateTracker:
             players = self.remote.call('GetPlayerList', 50, index, 0)
             while players and type(players) is not xmlrpc.client.Fault and len(players) > 0:
                 for player in players:
-                    self.players[player['Login']] = player
+                    self.players.append(player['Login'])
+                    self.playersCache[player['Login']] = player
                 
                 index += 51
                 players = self.remote.call('GetPlayerList', 50, index, 0)
 
     def on_player_connect(self, login, isSpectator):
-        pass
+        with self.playersLock:
+            if login not in self.players:
+                self.players.append(login)
     
     def on_player_disconnect(self, login, disconnectReason):
         with self.playersLock:
+            logger.debug(login)
+            logger.debug(login in self.players)
+            logger.debug(self.players)
             if login in self.players:
-                del self.players[login]
+                self.players.remove(login)
+            logger.debug(login in self.players)
 
     def on_player_chat(self, playerUid, login, text, isRegisteredCmd):
         with self.chatLock:
-            with self.playersLock:
-                if login in self.players:
-                    nickName = self.players[login]['NickName']
-                else:
-                    nickName = None
+            nickName = self.getPlayerByLogin(login)
 
-                self.chat.append({
-                    'login': login,
-                    'nickname': nickName,
-                    'message': text
-                })
+            self.chat.append({
+                'login': login,
+                'nickname': nickName,
+                'message': text
+            })
 
             if len(self.chat) > self.maxChatLines:
                 self.chat = self.chat[1:]
@@ -99,7 +105,9 @@ class GameStateTracker:
 
     def on_player_info_changed(self, playerInfo):
         with self.playersLock:
-            self.players[playerInfo['Login']] = playerInfo
+            if playerInfo['Login'] not in self.players:
+                self.players.append(playerInfo['Login'])
+            self.playersCache[playerInfo['Login']] = playerInfo
     
     def getChat(self):
         chatLines = []
@@ -109,9 +117,9 @@ class GameStateTracker:
         return chatLines
     
     def getPlayerByLogin(self, login):
-        with self.playersLock:
-            if login in self.players:
-                return self.players[login]
+        with self.playersCacheLock:
+            if login in self.playersCache:
+                return self.playersCache[login]
         
         return None
     

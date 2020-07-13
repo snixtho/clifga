@@ -42,7 +42,7 @@ class Clifga:
 
         # chat functions
         self.chatname = 'Admin'
-        self.chatMode = False
+        self.chatMode = config['chatMode']
     
     def _conn_attempt_cb(self, retry, maxretries):
         self._conn_retry = retry
@@ -100,12 +100,17 @@ class Clifga:
         self.cmdInput = CommandInputBox(self.screen, 2, height-1, width-4, self.remote)
         self.infoView = InfoView(self.screen, 0, height - 2, self.gameState, self.connInfo, self)
 
-        self.consoleBox = ConsoleBox(self.screen, 0, 0, width, height-3, self.gameState)
-        self.consoleBox.log(LineBuilder().addText('GBXRemote Ready to recieve commands. Type \'help\' for usage.', ColorPairMaker.MakeColorPair(curses.COLOR_MAGENTA)))
+        self.consoleBox = ConsoleBox(self.screen, 0, 0, width, height-3, self.gameState, self.config['maxLogs'])
+        self.consoleBox.enableShowChat(self.config['chatDisplay'])
+        self.consoleBox.enableShowcallbacks(self.config['callbacksDisplay'])
+        self.consoleBox.enableShowJoinAndLeave(self.config['showJoinAndLeave'])
 
         # initialize
-        self.screen.clear()
         self.gameState.initialize()
+
+        # ready
+        self.consoleBox.log(LineBuilder().addText('GBXRemote Ready to recieve commands. Type \'help\' for usage.', ColorPairMaker.MakeColorPair(curses.COLOR_MAGENTA)))
+        self.screen.clear()
 
         while self._mainLoopEnabled:
             c = self.screen.getch()

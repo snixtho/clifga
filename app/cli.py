@@ -570,6 +570,51 @@ class ConsoleBox(BaseWidget):
         self.state.remote.registerCallback('ManiaPlanet.PlayerChat', self.handle_chat)
         self.showchat = False
         self.showchatLock = threading.RLock()
+
+        self.state.remote.registerCallback('ManiaPlanet.PlayerConnect', self.handle_playerconnect)
+        self.state.remote.registerCallback('ManiaPlanet.PlayerDisconnect', self.handle_playerdisconnect)
+        self.showJoinAndLeave = False
+        self.showJoinAndLeaveLock = threading.RLock()
+    
+    def handle_playerconnect(self, login, isSpectator):
+        with self.showcallbacksLock:
+            if self.showJoinAndLeave:
+                player = self.state.getPlayerByLogin(login)
+                if player is None:
+                    nickname = '<unknown>'
+                else:
+                    nickname = player['NickName']
+                
+                t = datetime.datetime.now().strftime('%H:%M:%S')
+
+                line = LineBuilder(False)
+                line.addText('[%s] ' % str(t), self.colorTime)
+                line.addText(nickname, self._colorchat)
+                line.addText(' (')
+                line.addText(login, self._colorchat2)
+                line.addText(') has joined.')
+                self.custom('Status Update', self.colorLog, line)
+                self.scrollbottom()
+
+    def handle_playerdisconnect(self, login, disconnectReason):
+        with self.showcallbacksLock:
+            if self.showJoinAndLeave:
+                player = self.state.getPlayerByLogin(login)
+                if player is None:
+                    nickname = '<unknown>'
+                else:
+                    nickname = player['NickName']
+                
+                t = datetime.datetime.now().strftime('%H:%M:%S')
+
+                line = LineBuilder(False)
+                line.addText('[%s] ' % str(t), self.colorTime)
+                line.addText(nickname, self._colorchat)
+                line.addText(' (')
+                line.addText(login, self._colorchat2)
+                line.addText(') has left.')
+                self.custom('Status Update', self.colorLog, line)
+                self.scrollbottom()
     
     def log(self, text):
         """Send a INFO log message to the console.
@@ -697,6 +742,27 @@ class ConsoleBox(BaseWidget):
         """
         with self.showchatLock:
             return self.showchat
+    
+    def enableShowJoinAndLeave(self, enable=True):
+        """Enable/Disable showing of join/leave msgs in the console.
+
+        Args:
+            enable (bool, optional): [description]. Defaults to True.
+        """
+        with self.showJoinAndLeaveLock:
+            self.showJoinAndLeave = enable
+    
+    def getEnableShowJoinAndLeave(self, enable=True):
+        """Get whether the console is showing join/leave msgs or not.
+
+        Args:
+            enable (bool, optional): [description]. Defaults to True.
+
+        Returns:
+            bool: True if showing, false if not.
+        """
+        with self.showJoinAndLeaveLock:
+            return self.showJoinAndLeave
 
     def handle_input(self, c):
         if c < 0:

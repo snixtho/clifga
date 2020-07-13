@@ -1,4 +1,9 @@
 {
+    "chatMode": false,
+    "callbacksDisplay": false,
+    "chatDisplay": true,
+    "maxLogs": 500,
+
     "servers": [
         {
             "name": "Example Server",

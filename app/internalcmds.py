@@ -13,11 +13,12 @@ class Commands:
         self._register('help', self.cmd_help, 'Show this help message.')
         self._register('exit', self.cmd_exit, 'Close the session and the application.')
         self._register('togglecallbacks', self.cmd_togglecallbacks, 'Toggle automatic display callbacks from the server.')
-        self._register('togglechat', self.cmd_togglechat, 'Toggle dispalying of parsed chat messages.')
+        self._register('togglechat', self.cmd_togglechat, 'Toggle displaying of parsed chat messages.')
         self._register('setname', self.cmd_setname, 'Set your chat name.')
         self._register('chat', self.cmd_chat, 'Send a chat message.')
         self._register('togglechatmode', self.cmd_togglechatmode, 'Toggles the chat mode. If enabled, anything you type will be sent as a chat message, start the text with \'/\' to invoke a command.')
         self._register('players', self.cmd_players, 'Show a list of connected players.')
+        self._register('togglejoinleave', self.cmd_togglejoinleave, 'Toggle displaying of join/leave messages.')
 
         self.colorBlack = ColorPairMaker.MakeColorPair(curses.COLOR_BLACK)
         self.colorBlue = ColorPairMaker.MakeColorPair(curses.COLOR_BLUE)
@@ -179,3 +180,19 @@ class Commands:
         for line in lines:
             self.main.consoleBox.custom('', self.colorWhite, line)
         self.main.consoleBox.scrollbottom()
+    
+    def cmd_togglejoinleave(self):
+        """Enable showing of join/leave messages.
+        """
+        state = not self.main.consoleBox.getEnableShowJoinAndLeave()
+        self.main.consoleBox.enableShowJoinAndLeave(state)
+        line = LineBuilder()
+        line.addText('Showing of join/leave messages ')
+
+        if state:
+            line.addText('enabled', self.colorGreen)
+        else:
+            line.addText('disabled', self.colorRed)
+        
+        line.addText('.')
+        self.main.consoleBox.log(line)
