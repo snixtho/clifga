@@ -426,14 +426,22 @@ class CommandInputBox(BaseWidget):
             stripped = ''
 
             try:
-                if chatMode and len(inptext) > 0 and inptext[0] == '/':
-                    inptext = inptext[1:]
-                    stripped = '/'
+                dontparse = False
+                if chatMode:
+                    dontparse = True
+                    if len(inptext) > 0 and inptext[0] == '/':
+                        inptext = inptext[1:]
+                        stripped = '/'
+                        dontparse = False
 
                 # Run whole parser to check syntax as well
-                parser = Parser(inptext)
-                parser.parse()
-                line = SyntaxHighlighter.highlight(parser.tokenizer.tokens)
+                if not dontparse:
+                    parser = Parser(inptext)
+                    parser.parse()
+                    line = SyntaxHighlighter.highlight(parser.tokenizer.tokens)
+                else:
+                    line = LineBuilder()
+                    line.addText(inptext)
             except Exception as e:
                 # invalid syntax
                 line = LineBuilder()
