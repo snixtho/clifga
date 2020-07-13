@@ -39,6 +39,10 @@ class Clifga:
         self.cmdInput = None
         self.infoView = None
         self.consoleBox = None
+
+        # chat functions
+        self.chatname = 'Admin'
+        self.chatMode = False
     
     def _conn_attempt_cb(self, retry, maxretries):
         self._conn_retry = retry
@@ -78,18 +82,26 @@ class Clifga:
             cmdInput.setLoading(False)
             console.scrollbottom()
 
+    def chatSend(self, message):
+        # build message
+        message = '[$c00Admin$g:$<$f66%s$>$fff]$g $<$fc3%s$>' % (self.chatname, message)
+
+        # send it
+        t = threading.Thread(target=self.cmdsend_handler, args=('ChatSendServerMessage', [message], self.cmdInput, self.consoleBox))
+        t.start()
+        self.cmdInput.setLoading()
+        self.consoleBox._logChat('<server-local>', self.chatname, message)
+
     def mainUi(self):
         height, width = self.screen.getmaxyx()
         logger.debug('%s, %s' % (width, height))
         
         # widgets
         self.cmdInput = CommandInputBox(self.screen, 2, height-1, width-4, self.remote)
-        self.infoView = InfoView(self.screen, 0, height - 2, self.gameState, self.connInfo)
+        self.infoView = InfoView(self.screen, 0, height - 2, self.gameState, self.connInfo, self)
 
         self.consoleBox = ConsoleBox(self.screen, 0, 0, width, height-3, self.gameState)
         self.consoleBox.log(LineBuilder().addText('GBXRemote Ready to recieve commands. Type \'help\' for usage.', ColorPairMaker.MakeColorPair(curses.COLOR_MAGENTA)))
-
-        chatname = self.connInfo['username']
 
         # initialize
         self.screen.clear()
@@ -148,20 +160,34 @@ class Clifga:
 
                 if rawcmd is not None:
                     try:
-                        logger.debug('New command entered: ' + rawcmd)
-                        # parse the new cmd
-                        parser = Parser(rawcmd)
-                        cmd, args = parser.parse()
+                        tryCommand = False
 
-                        # only clear if correctly parsed
-                        self.cmdInput.clear()
+                        # check for chatmode
+                        if self.chatMode:
+                            if len(rawcmd) > 0 and rawcmd[0] == '/':
+                                rawcmd = rawcmd[1:]
+                                tryCommand = True
+                            else:
+                                # in chatmode and not a command, so send the raw input to chat
+                                self.cmdInput.clear()
+                                self.chatSend(rawcmd)
+                        else:
+                            tryCommand = True
 
-                        if not self.commands.callIfExists(cmd, *args):
-                            # send xmlrpc method call
-                            t = threading.Thread(target=self.cmdsend_handler, args=(cmd, args, self.cmdInput, self.consoleBox))
-                            t.start()
-                            self.cmdInput.setLoading()
-                        
+                        if tryCommand:
+                            logger.debug('New command entered: ' + rawcmd)
+                            # parse the new cmd
+                            parser = Parser(rawcmd)
+                            cmd, args = parser.parse()
+
+                            # only clear if correctly parsed
+                            self.cmdInput.clear()
+
+                            if not self.commands.callIfExists(cmd, *args):
+                                # send xmlrpc method call
+                                t = threading.Thread(target=self.cmdsend_handler, args=(cmd, args, self.cmdInput, self.consoleBox))
+                                t.start()
+                                self.cmdInput.setLoading()
                     except:
                         pass
                 
@@ -171,7 +197,7 @@ class Clifga:
             
             # draw widgets and other things
             self.consoleBox.draw()
-            self.cmdInput.draw()
+            self.cmdInput.draw(self.chatMode)
             self.screen.addstr(height - 3, 0, '─'*width)
             self.infoView.draw()
             self.screen.addstr(height - 1, 0, '> ')

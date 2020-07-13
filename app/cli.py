@@ -5,6 +5,7 @@ import time
 from .syntax import Tokenizer, TokenType, Parser
 import threading
 import math
+import datetime
 
 logger = logging.getLogger('clifga')
 
@@ -20,7 +21,8 @@ class LineBuilder:
         self.fulltextCache = None
     
     def addText(self, text, colorpair=1, attrib=None):
-        """Add a text component with or without individual styling.
+        """Add a text component with or without individual styling to the end
+        of the line.
 
         Args:
             text (string): Text to append.
@@ -35,6 +37,27 @@ class LineBuilder:
             'attrib': attrib,
             'color': colorpair
         })
+
+        self.fulltextCache = None
+        return self
+    
+    def prependText(self, text, colorpair=1, attrib=None):
+        """Add a text component with or without individual styling to the start
+        of the line.
+
+        Args:
+            text (string): Text to append.
+            colorpair (int, optional): The color pair ID to use. Defaults to 1.
+            attrib ([type], optional): [description]. Defaults to None.
+
+        Returns:
+            [type]: [description]
+        """
+        self.parts = [{
+            'text': text,
+            'attrib': attrib,
+            'color': colorpair
+        }] + self.parts
 
         self.fulltextCache = None
         return self
@@ -397,21 +420,30 @@ class CommandInputBox(BaseWidget):
         if loading:
             self.loadingLastTime = time.time()
 
-    def draw(self):
+    def draw(self, chatMode=False):
         if not self.loading:
+            inptext = self.inputLogic.text
+            stripped = ''
+
             try:
+                if chatMode and len(inptext) > 0 and inptext[0] == '/':
+                    inptext = inptext[1:]
+                    stripped = '/'
+
                 # Run whole parser to check syntax as well
-                parser = Parser(self.inputLogic.text)
+                parser = Parser(inptext)
                 parser.parse()
                 line = SyntaxHighlighter.highlight(parser.tokenizer.tokens)
             except Exception as e:
                 # invalid syntax
                 line = LineBuilder()
-                line.addText(self.inputLogic.text, self.colorError)
+                line.addText(inptext, self.colorError)
+
+            line.prependText(stripped)
 
             # draw suggestion
             if self.suggested is not None:
-                line.addText(self.suggested[len(self.inputLogic.text):], self.colorSuggestion)
+                line.addText(self.suggested[len(inptext):], self.colorSuggestion)
 
             self.screen.move(self.y, self.x)
             # self.screen.addstr(self.y, self.x, self.inputLogic.text)
@@ -452,11 +484,12 @@ class CommandInputBox(BaseWidget):
 class InfoView(BaseWidget):
     """Show basic info about the server and connection.
     """
-    def __init__(self, screen, x, y, state, connInfo):
+    def __init__(self, screen, x, y, state, connInfo, main):
         super(InfoView, self).__init__(screen, x, y)
         self.state = state
         self.maxPlayers = None
         self.connInfo = connInfo
+        self.main = main
 
         self.colorConnected = ColorPairMaker.MakeColorPair(curses.COLOR_GREEN)
         self.colorUser = ColorPairMaker.MakeColorPair(curses.COLOR_YELLOW)
@@ -484,6 +517,9 @@ class InfoView(BaseWidget):
         remoteInfo.addText(str(self.state.getPlayerCount()), self.colorPlayers)
         remoteInfo.addText('/')
         remoteInfo.addText(str(self.maxPlayers['CurrentValue']), self.colorMaxPlayers)
+
+        if self.main.chatMode:
+            remoteInfo.addText(' | Chat Mode Enabled')
 
         remoteInfo.output(0, self.y, self.screen)
 
@@ -515,6 +551,8 @@ class ConsoleBox(BaseWidget):
 
         self._colorchat = ColorPairMaker.MakeColorPair(curses.COLOR_MAGENTA)
         self._colorchat2 = ColorPairMaker.MakeColorPair(curses.COLOR_GREEN)
+        
+        self.colorTime = ColorPairMaker.MakeColorPair(curses.COLOR_BLUE)
 
         # gbxremote callback registrations
         self.state.remote.registerCallback('*', self.handle_callback)
@@ -579,7 +617,11 @@ class ConsoleBox(BaseWidget):
             nickname (string): Nickname of the player.
             text (string): The chat message.
         """
+
+        t = datetime.datetime.now().strftime('%H:%M:%S')
+
         line = LineBuilder()
+        line.addText('[%s] ' % str(t), self.colorTime)
         line.addText('[')
         line.addText(login, self._colorchat2)
         line.addText('] ')
