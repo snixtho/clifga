@@ -233,7 +233,7 @@ class DedicatedRemote:
                 self.socketlock.release()
         
         if connectionreset:
-            # atempt re-connection
+            # attempt re-connection
             threading.Thread(target=self.__internal_reconnect).start()
             pass
 

@@ -89,126 +89,129 @@ class Clifga:
         while True:
             c = self.screen.getch()
 
-            if c == 27:
-                # detect special key, fix for ssh
-                seq = [c]
-                while True:
-                    nextc = self.screen.getch()
-                    if nextc == curses.ERR:
-                        break
-                    seq.append(nextc)
-                logger.debug('Special key sequence detected: %s' % str(seq))
+            while c != curses.ERR:
+                if c == 27:
+                    # detect special key, fix for ssh
+                    seq = [c]
+                    while True:
+                        nextc = self.screen.getch()
+                        if nextc == curses.ERR:
+                            break
+                        seq.append(nextc)
+                    logger.debug('Special key sequence detected: %s' % str(seq))
 
-                if seq == [27, 79, 80]: # F1
-                    c = curses.KEY_F1
-                elif seq == [27, 79, 81]: # F2
-                    c = curses.KEY_F2
-            elif c == 127: # Backspace
-                c = curses.KEY_BACKSPACE
+                    if seq == [27, 79, 80]: # F1
+                        c = curses.KEY_F1
+                    elif seq == [27, 79, 81]: # F2
+                        c = curses.KEY_F2
+                elif c == 127: # Backspace
+                    c = curses.KEY_BACKSPACE
 
-            # update variables and perform full re-draw if window is resized
-            if c == curses.KEY_RESIZE:
-                height, width = self.screen.getmaxyx()
-                logger.debug('RESIZE EVENT')
-                logger.debug('%s, %s' % (width, height))
+                # update variables and perform full re-draw if window is resized
+                if c == curses.KEY_RESIZE:
+                    height, width = self.screen.getmaxyx()
+                    logger.debug('RESIZE EVENT')
+                    logger.debug('%s, %s' % (width, height))
 
-                # input box
-                cmdInput.y = height - 1
-                cmdInput.width = width - 4
+                    # input box
+                    cmdInput.y = height - 1
+                    cmdInput.width = width - 4
 
-                # info view
-                infoView.y = height - 2
+                    # info view
+                    infoView.y = height - 2
 
-                # console
-                consoleBox.width = width
-                consoleBox.height = height - 3
+                    # console
+                    consoleBox.width = width
+                    consoleBox.height = height - 3
 
-                self.screen.erase()
-            
-            ####################
-            
-            # handle inputs
-            cmdInput.handle_input(c)
-            consoleBox.handle_input(c)
+                    self.screen.erase()
+                
+                ####################
+                
+                # handle inputs
+                cmdInput.handle_input(c)
+                consoleBox.handle_input(c)
 
-            ####################
+                ####################
 
-            # check if we have a new command
-            rawcmd = cmdInput.action(False)
+                # check if we have a new command
+                rawcmd = cmdInput.action(False)
 
-            if rawcmd is not None:
-                try:
-                    logger.debug('New command entered: ' + rawcmd)
-                    # parse the new cmd
-                    parser = Parser(rawcmd)
-                    cmd, args = parser.parse()
+                if rawcmd is not None:
+                    try:
+                        logger.debug('New command entered: ' + rawcmd)
+                        # parse the new cmd
+                        parser = Parser(rawcmd)
+                        cmd, args = parser.parse()
 
-                    # only clear if correctly parsed
-                    cmdInput.clear()
+                        # only clear if correctly parsed
+                        cmdInput.clear()
 
-                    # basic internal cmd setup
-                    if cmd.lower() == 'exit': # Exit the app
-                        self.remote.stop()
-                        break
-                    elif cmd.lower() == 'help': # Show help msg
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, 'For GBXRemote methods, see XMLRPC docs.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, 'Internal app commands:')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  help - Show this help message.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  exit - Close the session and the application.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  togglecallbacks - Toggle automatic display callbacks from the server.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  togglechat - Toggle dispalying of parsed chat messages.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  setname <name> - Set your chat name.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  chat <message> - Toggle dispalying of parsed chat messages.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, 'Keybinds:')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  F1 - Scroll up in the console.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  F2 - Scroll down in the console.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  ENTER - Send method call.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  TAB - Complete method suggestion.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  ARROW UP - Go back in call history.')
-                        consoleBox.custom('- HELP -', consoleBox.colorLog, '  ARROW Down - Go forward in call history.')
-                        consoleBox.scrollbottom()
-                    elif cmd.lower() == 'togglecallbacks': # toggle callbacks display
-                        state = consoleBox.getEnableShowcallbacks()
-                        consoleBox.enableShowcallbacks(False if state else True)
-                        if not state:
-                            consoleBox.log('Will now show callbacks.')
+                        # basic internal cmd setup
+                        if cmd.lower() == 'exit': # Exit the app
+                            self.remote.stop()
+                            break
+                        elif cmd.lower() == 'help': # Show help msg
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, 'For GBXRemote methods, see XMLRPC docs.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, 'Internal app commands:')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  help - Show this help message.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  exit - Close the session and the application.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  togglecallbacks - Toggle automatic display callbacks from the server.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  togglechat - Toggle dispalying of parsed chat messages.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  setname <name> - Set your chat name.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  chat <message> - Toggle dispalying of parsed chat messages.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, 'Keybinds:')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  F1 - Scroll up in the console.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  F2 - Scroll down in the console.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  ENTER - Send method call.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  TAB - Complete method suggestion.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  ARROW UP - Go back in call history.')
+                            consoleBox.custom('- HELP -', consoleBox.colorLog, '  ARROW Down - Go forward in call history.')
+                            consoleBox.scrollbottom()
+                        elif cmd.lower() == 'togglecallbacks': # toggle callbacks display
+                            state = consoleBox.getEnableShowcallbacks()
+                            consoleBox.enableShowcallbacks(False if state else True)
+                            if not state:
+                                consoleBox.log('Will now show callbacks.')
+                            else:
+                                consoleBox.log('Disabled displaying of callbacks.')
+                            consoleBox.scrollbottom()
+                        elif cmd.lower() == 'togglechat': # toggle chat display
+                            state = consoleBox.getEnableShowChat()
+                            nextState = False if state else True
+                            consoleBox.enableShowChat(nextState)
+                            if nextState:
+                                consoleBox.log('Will now show the in-game chat.')
+                            else:
+                                consoleBox.log('Disabled in-game chat display.')
+                        elif cmd.lower() == 'setname': # set chat name
+                            if len(args) == 1 and type(args[0]) is str:
+                                chatname = args[0]
+                                consoleBox.log('Your chat name is now: ' + chatname)
+                            else:
+                                consoleBox.error("Invalid argument for command 'setname'")
+                        elif cmd.lower() == 'chat': # send chat message
+                            if len(args) > 0:
+                                message = ''
+                                for arg in args:
+                                    message += str(arg) + ' '
+                                message = message[:-1]
+                                message = '[$c00Admin$g:$<$f36%s$>$fff]$g $< $fc3%s $>' % (chatname, message)
+                                t = threading.Thread(target=self.cmdsend_handler, args=('ChatSendServerMessage', [message], cmdInput, consoleBox))
+                                t.start()
+                                cmdInput.setLoading()
+                                consoleBox._logChat('<server-local>', chatname, message)
+                            else:
+                                consoleBox.error('Please provide an actual message!')
                         else:
-                            consoleBox.log('Disabled displaying of callbacks.')
-                        consoleBox.scrollbottom()
-                    elif cmd.lower() == 'togglechat': # toggle chat display
-                        state = consoleBox.getEnableShowChat()
-                        nextState = False if state else True
-                        consoleBox.enableShowChat(nextState)
-                        if nextState:
-                            consoleBox.log('Will now show the in-game chat.')
-                        else:
-                            consoleBox.log('Disabled in-game chat display.')
-                    elif cmd.lower() == 'setname': # set chat name
-                        if len(args) == 1 and type(args[0]) is str:
-                            chatname = args[0]
-                            consoleBox.log('Your chat name is now: ' + chatname)
-                        else:
-                            consoleBox.error("Invalid argument for command 'setname'")
-                    elif cmd.lower() == 'chat': # send chat message
-                        if len(args) > 0:
-                            message = ''
-                            for arg in args:
-                                message += str(arg) + ' '
-                            message = message[:-1]
-                            message = '[$c00Admin$g:$<$f36%s$>$fff]$g $< $fc3%s $>' % (chatname, message)
-                            t = threading.Thread(target=self.cmdsend_handler, args=('ChatSendServerMessage', [message], cmdInput, consoleBox))
+                            # send xmlrpc method call
+                            t = threading.Thread(target=self.cmdsend_handler, args=(cmd, args, cmdInput, consoleBox))
                             t.start()
                             cmdInput.setLoading()
-                            consoleBox._logChat('<server-local>', chatname, message)
-                        else:
-                            consoleBox.error('Please provide an actual message!')
-                    else:
-                        # send xmlrpc method call
-                        t = threading.Thread(target=self.cmdsend_handler, args=(cmd, args, cmdInput, consoleBox))
-                        t.start()
-                        cmdInput.setLoading()
-                except:
-                    pass
+                    except:
+                        pass
+                
+                c = self.screen.getch()
 
             ####################
             
@@ -224,12 +227,15 @@ class Clifga:
             # refresh the screen
             cmdInput.setCursor()
             self.screen.refresh()
+
+            time.sleep(0.2)
         
         return True
 
     def run(self, screen):
         self.screen = screen
-        screen.nodelay(True)
+        screen.nodelay(1)
+        curses.noecho()
 
         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
 
