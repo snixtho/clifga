@@ -228,7 +228,7 @@ class Clifga:
             cmdInput.setCursor()
             self.screen.refresh()
 
-            time.sleep(0.2)
+            time.sleep(0.1)
         
         return True
 
