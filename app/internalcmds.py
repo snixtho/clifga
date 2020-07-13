@@ -119,6 +119,8 @@ class Commands:
             self.main.consoleBox.error('Please provide an actual message!')
 
     def cmd_togglechatmode(self):
+        """Enable chat mode.
+        """
         self.main.chatMode = not self.main.chatMode
         line = LineBuilder()
         line.addText('Chat mode ')
@@ -132,6 +134,12 @@ class Commands:
         self.main.consoleBox.log(line)
     
     def cmd_players(self, cols=3):
+        """Print a list of player's id and nickname.
+
+        Args:
+            cols (int, optional): Number of columns to split the players into. Defaults to 3.
+        """
+        # setup fields and find the longest column
         components = []
         longest = 0
         fmt = '(%s) %s'
@@ -144,7 +152,11 @@ class Commands:
             longest = max(longest, len(fmt % (str(login), str(player['NickName']))))
         
         longest += 1
-        
+
+        # sort players alphabetically
+        components.sort(key=lambda x: x['nick'])
+
+        # build lines in n columns
         i = 0
         lines = []
         for component in components:
@@ -163,5 +175,7 @@ class Commands:
 
             i += 1
         
+        # finally, output the lines
         for line in lines:
             self.main.consoleBox.custom('', self.colorWhite, line)
+        self.main.consoleBox.scrollbottom()
