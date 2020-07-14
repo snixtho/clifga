@@ -1,5 +1,4 @@
 import curses
-from curses.textpad import Textbox
 import logging
 import time
 from .syntax import Tokenizer, TokenType, Parser
