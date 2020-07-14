@@ -2,6 +2,7 @@
     "chatMode": false,
     "callbacksDisplay": false,
     "chatDisplay": true,
+    "showJoinAndLeave": true,
     "maxLogs": 500,
 
     "servers": [
