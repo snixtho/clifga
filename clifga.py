@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
 
-#from app.syntax import Parser
-
-"""expr = 'CallVoteEx "test1" "test2" "test3" "test3"'
-parser = Parser(expr)
-print('Expression: ' + expr)
-print('Parsed:', parser.parse())"""
-
-
 from app.uicontroller import Clifga, ServerSelector
 from curses import wrapper
 import logging

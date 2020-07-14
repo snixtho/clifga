@@ -18,6 +18,9 @@ class TokenType(enum.Enum):
     ArraySeparator = enum.auto()
     Boolean = enum.auto()
     Whitespace = enum.auto()
+    StructStart = enum.auto()
+    StructEnd = enum.auto()
+    StructFieldSeparator = enum.auto()
 
 class Token:
     """Base token.
@@ -166,14 +169,17 @@ class TokenIdentifier:
         """Identify the next token.
         """
         detectors = [
-            [ TokenType.Whitespace,     TokenIdentifier.IsWhiteSpace,     0 ],
-            [ TokenType.Number,         TokenIdentifier.IsNumber,         0 ],
-            [ TokenType.String,         TokenIdentifier.IsString,         1 ],
-            [ TokenType.ArrayStart,     TokenIdentifier.IsArrayStart,     1 ],
-            [ TokenType.ArrayEnd,       TokenIdentifier.IsArrayEnd,       1 ],
-            [ TokenType.ArraySeparator, TokenIdentifier.IsArraySeparator, 1 ],
-            [ TokenType.Boolean,        TokenIdentifier.IsBoolean,        0 ],
-            [ TokenType.Identifier,     TokenIdentifier.IsIdentifier,     0 ]
+            [ TokenType.Whitespace,           TokenIdentifier.IsWhiteSpace,           0 ],
+            [ TokenType.Number,               TokenIdentifier.IsNumber,               0 ],
+            [ TokenType.String,               TokenIdentifier.IsString,               1 ],
+            [ TokenType.ArrayStart,           TokenIdentifier.IsArrayStart,           1 ],
+            [ TokenType.ArrayEnd,             TokenIdentifier.IsArrayEnd,             1 ],
+            [ TokenType.ArraySeparator,       TokenIdentifier.IsArraySeparator,       1 ],
+            [ TokenType.StructStart,          TokenIdentifier.IsStructStart,          1 ],
+            [ TokenType.StructEnd,            TokenIdentifier.IsStructEnd,            1 ],
+            [ TokenType.StructFieldSeparator, TokenIdentifier.IsStructFieldSeparator, 1 ],
+            [ TokenType.Boolean,              TokenIdentifier.IsBoolean,              0 ],
+            [ TokenType.Identifier,           TokenIdentifier.IsIdentifier,           0 ]
         ]
 
         for detector in detectors:
@@ -210,6 +216,18 @@ class TokenIdentifier:
         return tokenizer.peekForward() == ']'
     
     @staticmethod
+    def IsStructStart(tokenizer):
+        if not tokenizer.hasNext():
+            return False
+        return tokenizer.peekForward() == '{'
+    
+    @staticmethod
+    def IsStructEnd(tokenizer):
+        if not tokenizer.hasNext():
+            return False
+        return tokenizer.peekForward() == '}'
+    
+    @staticmethod
     def IsBoolean(tokenizer):
         if tokenizer.hasNext(4) and tokenizer.peekForward(4) == 'true':
             return True
@@ -228,6 +246,12 @@ class TokenIdentifier:
         if not tokenizer.hasNext():
             return False
         return tokenizer.peekForward() == ','
+    
+    @staticmethod
+    def IsStructFieldSeparator(tokenizer):
+        if not tokenizer.hasNext():
+            return False
+        return tokenizer.peekForward() == ':'
     
     @staticmethod
     def IsWhiteSpace(tokenizer):
@@ -375,6 +399,100 @@ class Parser:
             n (int, optional): [description]. Defaults to 1.
         """
         self.i += n
+
+    def _ignore_whitespace(self):
+        while self.hasNext() and self.peekForward()[0].type == TokenType.Whitespace:
+            self.forward()
+    
+    def _struct(self):
+        if not self.hasNext():
+            raise Exception('Expected start of struct, but nothing left to parse.')
+
+        # check if first token is the start of a struct
+        firstToken = self.peekForward()[0]
+
+        if firstToken.type != TokenType.StructStart:
+            raise Exception('Start of struct expected.')
+
+        self.forward()
+
+        struct = dict()
+        nelements = 0
+
+        # parse struct elements
+        while self.hasNext():
+            # get the key of the struct field
+            self._ignore_whitespace()
+            nextToken = self.peekForward()[0]
+
+            # check if we need a array separator on this token
+            if nelements % 2 == 1:
+                if nextToken.type == TokenType.StructEnd:
+                    break
+
+                if nextToken.type != TokenType.ArraySeparator:
+                    raise Exception('Array separator expected.')
+
+                nelements += 1
+                self.forward()
+                continue
+
+            if nextToken.type != TokenType.String:
+                raise Exception('Field key (a string) expected.')
+
+            key = nextToken.value
+
+            if key in struct:
+                raise Exception("Field key '%s' already exists in struct." % str(key))
+
+            # ignore next whitespaces
+            self.forward()
+            self._ignore_whitespace()
+
+            # check if next token is field separator
+            if not self.hasNext() or self.peekForward()[0].type != TokenType.StructFieldSeparator:
+                raise Exception('Struct field separator expected.')
+
+            self.forward()
+            self._ignore_whitespace()
+
+            # get struct value
+            if not self.hasNext():
+                raise Exception('Struct field value expected, but got nothing.')
+
+            nextToken = self.peekForward()[0]
+
+            # check for invalid array syntax
+            if nextToken.type == TokenType.ArraySeparator:
+                raise Exception('Unexpected array separator.')
+            if nextToken.type == TokenType.ArrayEnd:
+                raise Exception('Unexpected end of array.')
+            if nextToken.type == TokenType.StructEnd:
+                raise Exception('Unexpected end of struct.')
+            if nextToken.type == TokenType.StructFieldSeparator:
+                raise Exception('Unexpected struct field separator.')
+
+            # parse the value
+            value = None
+
+            if nextToken.type == TokenType.ArrayStart:
+                value = self._array()
+            elif nextToken.type == TokenType.StructStart:
+                value = self._struct()
+            else:
+                value = nextToken.value
+                self.forward()
+            
+            print('%s -> %s' % (str(key), str(value)))
+
+            struct[key] = value
+            nelements += 1
+
+        if not self.hasNext() or self.peekForward()[0].type != TokenType.StructEnd:
+            raise Exception('End of struct expected.')
+        self.forward()
+
+        return struct
     
     def _array(self):
         """Parse an array.
@@ -424,6 +542,11 @@ class Parser:
                 arrayElements.append(self._array())
                 nelements += 1
                 continue
+            elif nextToken.type == TokenType.StructStart:
+                # struct detected, parse it
+                arrayElements.append(self._struct())
+                nelements += 1
+                continue
             else:
                 # add element value
                 arrayElements.append(nextToken.value)
@@ -437,8 +560,8 @@ class Parser:
         self.forward()
 
         return arrayElements
-
-    def parse(self):
+    
+    def _parse(self):
         """Parse the provided expression and extract the 
         method name and its arguments into proper python types.
 
@@ -483,13 +606,40 @@ class Parser:
                 raise Exception('Unexpected array separator.')
             if nextToken.type == TokenType.ArrayEnd:
                 raise Exception('Unexpected end of array.')
+            if nextToken.type == TokenType.StructEnd:
+                raise Exception('Unexpected end of struct.')
+            if nextToken.type == TokenType.StructFieldSeparator:
+                raise Exception('Unexpected struct field separator.')
 
             if nextToken.type == TokenType.ArrayStart:
                 # array detected, parse it
                 args.append(self._array())
+            if nextToken.type == TokenType.StructStart:
+                # struct detected, parse it
+                args.append(self._struct())
             else:
                 # append value of token
                 args.append(nextToken.value)
                 self.forward()
         
         return command, args
+
+    def parse(self):
+        """Parse the provided expression and extract the 
+        method name and its arguments into proper python types.
+
+        (wrapper function for _parse)
+
+        Raises:
+
+        Returns:
+            tuple: Tuple with method name and an array of arguments.
+        """
+        try:
+            return self._parse()
+        except Exception as e:
+            if self.hasNext():
+                pos = self.peekForward()[0].pos
+            else:
+                pos = '<END>'
+            raise Exception('[Position: %s] %s' % (str(pos), str(e)))
