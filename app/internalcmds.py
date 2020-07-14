@@ -144,10 +144,16 @@ class Commands:
         components = []
         longest = 0
         fmt = '(%s) %s'
-        for login, player in self.main.gameState.players.items():
+        for player in self.main.gameState.getPlayers():
+            login = player['Login']
+            if 'NickName' in player:
+                nick = player['NickName']
+            else:
+                nick = '<unknown>'
+            
             components.append({
                 'login': login,
-                'nick': player['NickName']
+                'nick': nick
             })
 
             longest = max(longest, len(fmt % (str(login), str(player['NickName']))))

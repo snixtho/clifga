@@ -130,3 +130,15 @@ class GameStateTracker:
     def getPlayerCount(self):
         with self.playersLock:
             return len(self.players)
+    
+    def getPlayers(self):
+        players = []
+        with self.playersLock:
+            for player in self.players:
+                with self.playersCacheLock:
+                    if player in self.playersCache:
+                        players.append(self.playersCache[player])
+                    else:
+                        players.append({'Login': player})
+        
+        return players
