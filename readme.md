@@ -1,5 +1,5 @@
 # Clifga
-**Clifga** stands for **Command-Line Interface for GBXRemote Administration** and is a tool that can be used to connect to your Maniaplanet/Trackmania server to perform various administrational tasks through the XMLRPC protocol.
+**Clifga** stands for **Command-Line Interface for GBXRemote Administration** and is a tool that can be used to connect to your Maniaplanet/Trackmania server to perform various administrational tasks through it's XMLRPC protocol.
 
 # Screenshots
 ## Server Selection
@@ -18,8 +18,9 @@
 
 # Installation
 1. Clone this repository `git clone https://github.com/snixtho/clifga.git`
-2. Edit the configuration to your likings. You can add multiple servers if you wish.
-3. Run it with python3. Example: `python3 clifga.py`
+2. Rename `config.example.json` to `config.json`
+3. Edit `config.json` to your likings. You can add multiple servers if you wish.
+4. Run it with python3. Example: `python3 clifga.py`
 
 # Usage
 By default anything you type will be directly sent to the XMLRPC server. You can call a XMLRPC method by first specifying the method name and then its arguments separated by spaces. 
