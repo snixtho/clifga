@@ -98,7 +98,9 @@ class Clifga:
         
         # widgets
         self.cmdInput = CommandInputBox(self.screen, 2, height-1, width-4, self.remote)
+
         self.infoView = InfoView(self.screen, 0, height - 2, self.gameState, self.connInfo, self)
+        self.infoView.enableFromConfig(self.config['infoView'])
 
         self.consoleBox = ConsoleBox(self.screen, 0, 0, width, height-3, self.gameState, self.config['maxLogs'])
         self.consoleBox.enableShowChat(self.config['chatDisplay'])

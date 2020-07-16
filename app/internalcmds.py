@@ -2,6 +2,7 @@ import logging
 import threading
 from .cli import LineBuilder, ColorPairMaker
 import curses
+import re
 
 logger = logging.getLogger('clifga')
 
@@ -19,6 +20,8 @@ class Commands:
         self._register('togglechatmode', self.cmd_togglechatmode, 'Toggles the chat mode. If enabled, anything you type will be sent as a chat message, start the text with \'/\' to invoke a command.')
         self._register('players', self.cmd_players, 'Show a list of connected players.')
         self._register('togglejoinleave', self.cmd_togglejoinleave, 'Toggle displaying of join/leave messages.')
+        self._register('toggleinfo', self.cmd_toggleinfo, 'Toggle parts of the information shown in the info view. Info names: connStatus, connInfo, playerCount, serverName')
+        self._register('cleantext', self.cmd_cleantext, 'Remove formatting from maniaplanet text.')
 
         self.colorBlack = ColorPairMaker.MakeColorPair(curses.COLOR_BLACK)
         self.colorBlue = ColorPairMaker.MakeColorPair(curses.COLOR_BLUE)
@@ -128,8 +131,10 @@ class Commands:
 
         if self.main.chatMode:
             line.addText('enabled', self.colorGreen)
+            self.main.infoView.setEnabled('chatMode', self.main.chatMode)
         else:
             line.addText('disabled', self.colorRed)
+            self.main.infoView.setEnabled('chatMode', self.main.chatMode)
         
         line.addText('.')
         self.main.consoleBox.log(line)
@@ -201,4 +206,33 @@ class Commands:
             line.addText('disabled', self.colorRed)
         
         line.addText('.')
+        self.main.consoleBox.log(line)
+    
+    def cmd_toggleinfo(self, info):
+        """toggle showing of information in the infoview.
+        """
+        state = self.main.infoView.getEnabled(info)
+        self.main.infoView.setEnabled(info, not state)
+
+        line = LineBuilder()
+        line.addText("The info '%s' is now " % info)
+
+        if state:
+            line.addText('enabled.', self.colorGreen)
+        else:
+            line.addText('disabled.', self.colorRed)
+        
+        self.main.consoleBox.log(line)
+    
+
+    def cmd_cleantext(self, *text):
+        formatted = ''
+        for t in text:
+            formatted += str(t)
+        
+        cleaned = re.sub('\\$((l|L|m|M)\\[.+\\]|[0-9a-fA-F]{3}|[a-zA-Z]{1})', '', formatted)
+
+        line = LineBuilder()
+        line.addText('Cleaned text: ', self.colorYellow)
+        line.addText(str(cleaned))
         self.main.consoleBox.log(line)

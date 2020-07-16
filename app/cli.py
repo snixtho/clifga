@@ -504,31 +504,106 @@ class InfoView(BaseWidget):
         self.colorPort = ColorPairMaker.MakeColorPair(curses.COLOR_GREEN)
         self.colorPlayers = ColorPairMaker.MakeColorPair(curses.COLOR_YELLOW)
         self.colorMaxPlayers = ColorPairMaker.MakeColorPair(curses.COLOR_GREEN)
+
+        self.parts = {
+            'connStatus': {'enabled': False, 'draw': self._draw_connStatus},
+            'connInfo': {'enabled': False, 'draw': self._draw_connInfo},
+            'playerCount': {'enabled': False, 'draw': self._draw_playerCount},
+            'chatMode': {'enabled': False, 'draw': self._draw_chatMode},
+            'serverName': {'enabled': False, 'draw': self._draw_serverName}
+        }
+        
+        self.partsLock = threading.RLock()
     
-    def draw(self):
+    def _draw_connStatus(self, line): # draw connection status
+        line.addText('GBXRemote')
+        line.addText(' ~ ')
+        line.addText('Connected', self.colorConnected)
+    
+    def _draw_connInfo(self, line): # draw connection info
+        line.addText(str(self.connInfo['username']), self.colorUser)
+        line.addText('@')
+        line.addText(str(self.connInfo['host']), self.colorHost)
+        line.addText(':')
+        line.addText(str(self.connInfo['port']), self.colorPort)
+    
+    def _draw_playerCount(self, line): # draw player count
         if self.maxPlayers is None:
             self.maxPlayers = self.state.remote.call('GetMaxPlayers')
+        
+        line.addText('Players: ')
+        line.addText(str(self.state.getPlayerCount()), self.colorPlayers)
+        line.addText('/')
+        line.addText(str(self.maxPlayers['CurrentValue']), self.colorMaxPlayers)
+    
+    def _draw_chatMode(self, line): # draw chat mode
+        line.addText('Chat Mode Enabled')
+    
+    def _draw_serverName(self, line): # draw server name
+        name = self.state.remote.call('GetServerName')
+        line.addText('Server: ')
+        line.addText(str(name), self.colorHost)
 
-        remoteInfo = LineBuilder()
-        remoteInfo.addText('GBXRemote')
-        remoteInfo.addText(' ~ ')
-        remoteInfo.addText('Connected', self.colorConnected)
-        remoteInfo.addText(' | ')
-        remoteInfo.addText(str(self.connInfo['username']), self.colorUser)
-        remoteInfo.addText('@')
-        remoteInfo.addText(str(self.connInfo['host']), self.colorHost)
-        remoteInfo.addText(':')
-        remoteInfo.addText(str(self.connInfo['port']), self.colorPort)
-        remoteInfo.addText(' | ')
-        remoteInfo.addText('Players: ')
-        remoteInfo.addText(str(self.state.getPlayerCount()), self.colorPlayers)
-        remoteInfo.addText('/')
-        remoteInfo.addText(str(self.maxPlayers['CurrentValue']), self.colorMaxPlayers)
+    def setEnabled(self, part, enabled):
+        """Set a part to enabled or disabled.
 
-        if self.main.chatMode:
-            remoteInfo.addText(' | Chat Mode Enabled')
+        Args:
+            part (string): Part to set.
+            enabled (bool): True if enabled, false if not.
 
-        remoteInfo.output(0, self.y, self.screen)
+        Raises:
+            Exception: If the part is invalid
+        """
+        with self.partsLock:
+            if part not in self.parts:
+                raise Exception('%s is not a part in the info view.' % str(part))
+
+            self.parts[part]['enabled'] = enabled
+    
+    def getEnabled(self, part):
+        """Get whether a part is enabled or not.
+
+        Args:
+            part (string): Name of the part.
+
+        Raises:
+            Exception: If the part is invalid
+
+        Returns:
+            [type]: [description]
+        """
+        with self.partsLock:
+            if part not in self.parts:
+                raise Exception('%s is not a part in the info view.' % str(part))
+
+            return self.parts[part]['enabled']
+
+    def enableFromConfig(self, config):
+        """Set info view config from config.
+
+        Args:
+            config ([type]): [description]
+        """
+        with self.partsLock:
+            for k,v in config.items():
+                if k in self.parts:
+                    self.parts[k]['enabled'] = v
+
+    def draw(self):
+        line = LineBuilder()
+
+        i = 0
+        for _, part in self.parts.items():
+            if not part['enabled']:
+                continue
+
+            if i > 0:
+                line.addText(' | ')
+            
+            part['draw'](line)
+            i += 1
+
+        line.output(0, self.y, self.screen)
 
 class ConsoleBox(BaseWidget):
     """Console view that shows formatted and styled logs.
