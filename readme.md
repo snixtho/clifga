@@ -14,6 +14,7 @@
 - Show when a player joins or leaves.
 - Show number of players in the server.
 - Clean text formatting from the game.
+- Can run out of the box on any machine with a default Python 3 installation.
 
 # Installation
 1. Clone this repository `git clone https://github.com/snixtho/clifga.git`
