@@ -3,6 +3,7 @@ import json
 from .trackmania.gbxremote import DedicatedRemote
 from .syntax import Parser
 import socket
+import os
 
 # load config
 config = json.load(open('config.json', 'r'))
@@ -27,7 +28,7 @@ class SimpleOutput:
     @staticmethod
     def ExitMessage(msg, code=0):
         SimpleOutput.Line(msg)
-        exit(code)
+        os._exit(code)
 
 class CLCMDHandler:
     _parser = argparse.ArgumentParser(description='Clifga Command-Line utilities.')
