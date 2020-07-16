@@ -1,5 +1,5 @@
 # Clifga
-**Clifga** stands for **Command-Line Interface for GBXRemote Administration** and is a tool that can be used to connect to your Maniaplanet/Trackmania server to perform various administrational tasks through it's XMLRPC protocol.
+**Clifga** stands for **Command-Line Interface for GBXRemote Administration** and is a tool that can be used to connect to your Maniaplanet/Trackmania server to perform various administrational tasks through its XMLRPC protocol.
 
 # Screenshots
 ## Server Selection
