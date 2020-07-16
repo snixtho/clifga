@@ -15,6 +15,8 @@
 - Show number of players in the server.
 - Clean text formatting from the game.
 - Can run out of the box on any machine with a default Python 3 installation.
+- Send a XMLRPC call to multiple servers at once using the command-line.
+- Use the command-line to check if a server is frozen. (Helpful for the TM2020 servers)
 
 # Installation
 1. Clone this repository `git clone https://github.com/snixtho/clifga.git`
@@ -28,6 +30,7 @@ By default anything you type will be directly sent to the XMLRPC server. You can
 For example: `SomeMethod arg1 "arg2" 123 ["arrays", "supported"] {"and": "structs as well"}`
 
 To see internal commands and keybinds, type `help`.
+To see command-line options use `-h` or `--help`.
 
 # Config Explanation
 - `chatMode`: Whether to enable "chat mode", which means anything you type will be sent to the chat.
