@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from app.uicontroller import Clifga, ServerSelector
+from app.clcmds import CLCMDHandler
 from curses import wrapper
 import logging
 import sys
@@ -18,6 +19,10 @@ if config['logging']['enabled']:
     formatter = logging.Formatter('[%(asctime)s][%(name)s][%(levelname)s] %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+# check for command-line arguments
+if CLCMDHandler.Check():
+    exit(0)
 
 try:
     # select server
