@@ -5,6 +5,12 @@
     "showJoinAndLeave": true,
     "maxLogs": 500,
 
+    "logging": {
+        "enabled": true,
+        "level": "DEBUG",
+        "file": "clifga.log"
+    },
+
     "infoView": {
         "connStatus": true,
         "connInfo": true,
