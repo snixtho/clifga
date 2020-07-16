@@ -52,7 +52,7 @@ class Commands:
     ###########################################################
 
     def cmd_help(self):
-        color = self.main.consoleBox.colorLog
+        color = self.colorMagenta
         self.main.consoleBox.custom('- HELP -', color, 'For GBXRemote methods, see XMLRPC docs.')
         self.main.consoleBox.custom('- HELP -', color, 'Internal app commands:')
 
