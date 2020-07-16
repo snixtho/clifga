@@ -5,6 +5,13 @@
     "showJoinAndLeave": true,
     "maxLogs": 500,
 
+    "infoView": {
+        "connStatus": true,
+        "connInfo": true,
+        "playerCount": true,
+        "serverName": true
+    },
+
     "servers": [
         {
             "name": "Example Server",
