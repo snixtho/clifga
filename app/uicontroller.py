@@ -132,7 +132,7 @@ class Clifga:
                         c = curses.KEY_F1
                     elif seq == [27, 79, 81]: # F2
                         c = curses.KEY_F2
-                elif c == 127: # Backspace
+                elif c == 127 or c == 8: # Backspace
                     c = curses.KEY_BACKSPACE
 
                 # update variables and perform full re-draw if window is resized
